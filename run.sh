@@ -1,5 +1,5 @@
 #!/bin/bash
-# ./connect.sh archivesspace-ex-complete ex-complete archivesspaceprogramteam
+# ./run.sh archivesspace-ex-complete ex-complete archivesspaceprogramteam
 
 CLUSTER=$1
 SERVICE=$2
@@ -13,10 +13,11 @@ TASK=$(
     | jq -r '.["taskArns"][0] | split("/")[-1]'
 )
 
+# replace command "/root/bootstrap.sh" with "bash" to access the container
 aws ecs execute-command  \
   --cluster $CLUSTER \
   --task $TASK \
   --container certbot \
   --profile $PROFILE \
-  --command "/bin/bash" \
+  --command "/root/bootstrap.sh" \
   --interactive
