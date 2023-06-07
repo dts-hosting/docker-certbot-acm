@@ -8,10 +8,10 @@ Provides scripts to:
 - Upload certificates to ACM
 - Register certificates with an ALB
 
-Certificates are status checked using cron.
+Certificates are status checked using `cron.daily`.
 
 *Note: to generate certificate/s the first time without
-waiting for cron see [run.sh](./run.sh) as an example of
+waiting for cron see [run.sh](./test/run.sh) as an example of
 directly invoking the certificate bootstrap process.*
 
 The Docker image is based on Nginx which runs persistently
@@ -24,10 +24,12 @@ from an ALB http listener):
 
 ## Task definition (example)
 
+To run in ECS include the image in a task definition:
+
 ```json
 {
   "name": "certbot",
-  "image": "${organization}/certbot-acm:latest",
+  "image": "${username}/certbot-acm:latest",
   "networkMode": "${network_mode}",
   "essential": true,
   "environment": [
@@ -61,7 +63,7 @@ from an ALB http listener):
 ```bash
 docker build -t certbot-acm .
 docker run -it -p 80:80 --rm certbot-acm
-# if checks out
-docker tag certbot-acm lyrasis/certbot-acm:latest
-docker push lyrasis/certbot-acm:latest
+
+# if checks out (requires push access to Docker Hub repository)
+./build.sh lyrasis
 ```
