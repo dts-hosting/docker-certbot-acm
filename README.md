@@ -60,8 +60,8 @@ from an ALB http listener):
 
 ```bash
 docker build -t certbot-acm .
+docker run -it -p 80:80 --rm certbot-acm
+# if checks out
 docker tag certbot-acm lyrasis/certbot-acm:latest
 docker push lyrasis/certbot-acm:latest
-
-docker run -it -p 80:80 --rm certbot-acm
 ```
