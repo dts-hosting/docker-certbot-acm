@@ -1,5 +1,5 @@
 #!/bin/bash
-# ./run.sh archivesspace-ex-complete ex-complete archivesspaceprogramteam
+# ./test/run.sh archivesspace-ex-complete ex-complete archivesspaceprogramteam
 
 CLUSTER=$1
 SERVICE=$2
