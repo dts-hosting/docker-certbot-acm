@@ -9,7 +9,7 @@ CERTBOT_ALB_ARN=$(
   aws elbv2 describe-load-balancers --names $CERTBOT_ALB_NAME | jq -r '.LoadBalancers[0].LoadBalancerArn'
 )
 CERTBOT_ALB_HTTPS_ARN=$(
-  aws elbv2 describe-listeners --load-balancer-arn $CERTBOT_ALB_ARN --names $CERTBOT_ALB_NAME | jq -r '.LoadBalancers[0].LoadBalancerArn'
+  aws elbv2 describe-listeners --load-balancer-arn $CERTBOT_ALB_ARN | jq -r '.Listeners[] | select(.Protocol | contains("HTTPS")) | .ListenerArn'
 )
 
 if [ -n "$CERT_ARN" ];
