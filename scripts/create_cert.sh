@@ -13,7 +13,7 @@ certbot certonly --webroot --non-interactive --agree-tos \
   -d $CERTBOT_DOMAIN
 
 CERT_ARN=$(
-  aws acm list-certificates | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
+  aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
 )
 
 if [ -z "$CERT_ARN" ];

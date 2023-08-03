@@ -4,7 +4,7 @@ CERTBOT_DOMAIN=${1:-""}
 DATE_EXPIRATION_INTERVAL=${2:-"14"}
 
 CERT_ARN=$(
-  aws acm list-certificates | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
+  aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
 )
 
 echo -e "\nChecking status for: $CERTBOT_DOMAIN\n"
