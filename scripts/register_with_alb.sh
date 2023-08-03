@@ -3,7 +3,7 @@
 CERTBOT_DOMAIN=${1:-""}
 
 CERT_ARN=$(
-  aws acm list-certificates | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
+  aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
 )
 CERTBOT_ALB_ARN=$(
   aws elbv2 describe-load-balancers --names $CERTBOT_ALB_NAME | jq -r '.LoadBalancers[0].LoadBalancerArn'
