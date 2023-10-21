@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CERTBOT_DOMAIN=${1:-""}
-DATE_EXPIRATION_INTERVAL=${2:-"14"}
+DATE_EXPIRATION_INTERVAL=${2:-"28"}
 
 CERT_ARN=$(
   aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\") | .CertificateArn"
