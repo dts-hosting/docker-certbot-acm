@@ -5,7 +5,6 @@ CERTBOT_DOMAIN=${1:-""}
 echo -e "\nGenerating certificate/s for: $CERTBOT_DOMAIN\n"
 
 mkdir -p $CERTBOT_CERT_PATH
-# TODO: delete any existing certs?
 
 certbot certonly --webroot --non-interactive --agree-tos \
   --email $CERTBOT_EMAIL \
@@ -13,13 +12,21 @@ certbot certonly --webroot --non-interactive --agree-tos \
   -d $CERTBOT_DOMAIN
 
 CERT_ARN=$(
-  aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 --max-items 1000 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\" and .Status == \"ISSUED\" and .InUse == true) | .CertificateArn"
+  aws acm list-certificates \
+    --includes keyTypes=RSA_2048,EC_prime256v1 \
+    --query "CertificateSummaryList[?DomainName=='${CERTBOT_DOMAIN}' && Status=='ISSUED' && InUse==\`true\`].CertificateArn" --output text
 )
 
+# Cloudfront requires certificates to be in us-east-1
+# We do not query for InUse because cloudfront is not used for every site
 USE1_CERT_ARN=$(
-  aws acm list-certificates --includes keyTypes=RSA_2048,EC_prime256v1 --max-items 1000 --region us-east-1 | jq -r ".CertificateSummaryList | .[]  | select ( .DomainName == \"${CERTBOT_DOMAIN}\" and .Status == \"ISSUED\") | .CertificateArn" | head -n1
+  aws acm list-certificates \
+    --includes keyTypes=RSA_2048,EC_prime256v1 \
+    --query "CertificateSummaryList[?DomainName=='${CERTBOT_DOMAIN}' && Status=='ISSUED'].CertificateArn" \
+    --output text --region us-east-1
 )
 
+# Handle the alb certificate
 if [ -z "$CERT_ARN" ];
 then
   echo -e "\nImporting new certificate for: $CERTBOT_DOMAIN\n"
@@ -52,6 +59,7 @@ else
     --private-key fileb://$CERTBOT_CERT_PATH/$CERTBOT_DOMAIN/privkey.pem
 fi
 
+# Handle the cloudfront certificate
 if [ -z "$USE1_CERT_ARN" ]; then
   echo -e "\nImporting new certificate to us-east-1: $CERTBOT_DOMAIN\n"
 
