@@ -41,6 +41,18 @@
 #  -d, --delete       Delete certificates in ACM that are not used by load
 #                     balancers. (default: False)
 #  -r, --region TEXT  The AWS region to work in. (default: us-west-2)
+#
+# -----
+#
+# Usage: cert_info.py duplicates [OPTIONS]
+#
+# Options:
+#  -d, --delete        Delete duplicate certificates. (default: False)
+#  -r, --region TEXT   The AWS region to work in. (default: us-west-2)
+#  -w, --wait INTEGER  Time in seconds to wait between dissociation and
+#                      deletion of certificates. (default: 20)
+#
+import time
 
 import boto3
 import click
@@ -81,6 +93,21 @@ def get_lb_cert_arns_by_region(aws_region):
         for cert in listener_certs['Certificates']:
           if 'CertificateArn' in cert:
             certs.append(cert['CertificateArn'])
+  return certs
+
+
+def get_lb_and_listener_by_cert_arn(aws_region):
+  elb = boto3.client('elbv2', region_name=aws_region)
+  response = elb.describe_load_balancers()
+  certs = {}
+  for lb in response['LoadBalancers']:
+    listeners = elb.describe_listeners(LoadBalancerArn=lb['LoadBalancerArn'])
+    for listener in listeners['Listeners']:
+      listener_certs = elb.describe_listener_certificates(ListenerArn=listener['ListenerArn'])
+      if 'Certificates' in listener_certs:
+        for cert in listener_certs['Certificates']:
+          if 'CertificateArn' in cert:
+            certs[cert['CertificateArn']] = {"lb_arn": lb['LoadBalancerArn'], "listener_arn": listener['ListenerArn']}
   return certs
 
 
@@ -154,6 +181,39 @@ def check_certs(src_region, dest_region):
   print(f"[*] Certificates in {src_region} missing from {dest_region}: {len(missing_from_dest)}")
   for cert in missing_from_dest:
     print(f"{cert['CertificateArn']} {cert['DomainName']}")
+
+@cli.command(name="duplicates")
+@click.option('--delete', '-d', 'delete_duplicates', is_flag=True, default=False, help='Delete duplicate certificates. (default: False)')
+@click.option('--region', '-r', 'aws_region', default='us-west-2', help='The AWS region to work in. (default: us-west-2)')
+@click.option('--wait', '-w', 'wait_time', default=20, help='Time in seconds to wait between dissociation and deletion of certificates. (default: 20)')
+def find_duplicate_certs(delete_duplicates, aws_region, wait_time):
+  elb = boto3.client('elbv2', region_name=aws_region)
+  acm = boto3.client('acm', region_name=aws_region)
+  certs = get_all_certs_in_region(aws_region)
+  certs_by_lb = get_lb_and_listener_by_cert_arn(aws_region)
+  cert_map = {}
+  cert_arn_map = {}
+  for cert in certs:
+    if cert['DomainName'] in cert_map:
+      cert_map[cert['DomainName']].append(cert)
+    else:
+      cert_map[cert['DomainName']] = [cert]
+    if cert['CertificateArn'] in cert_arn_map:
+      cert_arn_map[cert['CertificateArn']].append(cert)
+    else:
+      cert_arn_map[cert['CertificateArn']] = [cert]
+
+  for domain, certs in cert_map.items():
+    if len(certs) > 1:
+      print(f"[*] {domain} has {len(certs)} certificates:")
+      for index, cert in enumerate(certs):
+        in_use = "✔️" if cert['InUse'] else "❌"
+        if cert['CertificateArn'] in certs_by_lb:
+          print(f"  - {in_use} [{certs_by_lb[cert['CertificateArn']]['lb_arn']}] {cert['CertificateArn']} {cert['DomainName']}")
+          if index > 0 and delete_duplicates:
+            elb.remove_listener_certificates(ListenerArn=certs_by_lb[cert['CertificateArn']]['listener_arn'], Certificates=[{'CertificateArn': cert['CertificateArn']}])
+            time.sleep(wait_time)
+            acm.delete_certificate(CertificateArn=cert['CertificateArn'])
 
 
 if __name__ == '__main__':
